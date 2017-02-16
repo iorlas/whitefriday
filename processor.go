@@ -75,7 +75,7 @@ var parsers = []Parser{{
         if err != nil {
             return "", err
         }
-        return fmt.Sprintf("**%s**", inner), nil
+        return fmt.Sprintf("**%s**", strings.TrimSpace(inner)), nil
     },
 }, {
     Atoms: []atom.Atom{atom.I, atom.Em},
@@ -86,12 +86,21 @@ var parsers = []Parser{{
         if err != nil {
             return "", err
         }
-        return fmt.Sprintf("*%s*", inner), nil
+        return fmt.Sprintf("*%s*", strings.TrimSpace(inner)), nil
     },
 }, {
     Atoms: []atom.Atom{atom.Br},
     Process: func(state State, source *html.Node, processChildren func(State) (string, error)) (s string, err error) {
-        return "\n\n", nil
+        return " \n", nil
+    },
+}, {
+    Atoms: []atom.Atom{atom.P},
+    Process: func(state State, source *html.Node, processChildren func(State) (string, error)) (s string, err error) {
+        inner, err := processChildren(state)
+        if err != nil {
+            return "", err
+        }
+        return "\n\n" + strings.TrimSpace(inner) + "\n\n", nil
     },
 }, {
     Atoms: []atom.Atom{atom.Ul, atom.Ol},
@@ -101,6 +110,9 @@ var parsers = []Parser{{
         state.ListDepth -= 1
         if err != nil {
             return "", err
+        }
+        if state.ListDepth > 0 {
+            return "\n" + inner, nil
         }
         return inner, nil
     },
@@ -117,7 +129,7 @@ var parsers = []Parser{{
         } else {
             buf.WriteString("* ")
         }
-        buf.WriteString(inner)
+        buf.WriteString(strings.TrimSpace(inner))
         if source.NextSibling != nil {
             buf.WriteString("\n")
         }
@@ -131,7 +143,7 @@ var parsers = []Parser{{
             return "", err
         }
         buf := bytes.NewBufferString("")
-        for i, line := range strings.Split(inner, "\n") {
+        for i, line := range strings.Split(strings.TrimSpace(inner), "\n") {
             if i != 0 {
                 buf.WriteString("\n")
             }
@@ -156,17 +168,21 @@ var parsers = []Parser{{
                 title = attr.Val
             }
         }
-        result := "[" + inner + "](" + href
+        result := bytes.NewBufferString("[")
+        result.WriteString(strings.TrimSpace(inner))
+        result.WriteString("](")
+        result.WriteString(strings.TrimSpace(href))
         if title != "" {
-            result += " \"" + title + "\""
+            result.WriteString(" \"")
+            result.WriteString(strings.TrimSpace(title))
+            result.WriteString("\"")
         }
-        result += ")"
-        return result, nil
+        result.WriteString(")")
+        return result.String(), nil
     },
 }, {
     Atoms: []atom.Atom{atom.Img},
     Process: func(state State, source *html.Node, processChildren func(State) (string, error)) (s string, err error) {
-
         var src, alt, title string
         for _, attr := range source.Attr {
             switch attr.Key {
@@ -178,12 +194,16 @@ var parsers = []Parser{{
                 alt = attr.Val
             }
         }
-        result := "![" + alt + "](" + src
+        result := bytes.NewBufferString("![")
+        result.WriteString(strings.TrimSpace(alt))
+        result.WriteString("](")
+        result.WriteString(strings.TrimSpace(src))
         if title != "" {
-            result += " \"" + title + "\""
+            result.WriteString(" \"")
+            result.WriteString(strings.TrimSpace(title))
+            result.WriteString("\"")
         }
-        result += ")"
-
-        return result, nil
+        result.WriteString(")")
+        return result.String(), nil
     },
 }}
