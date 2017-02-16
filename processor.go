@@ -9,19 +9,31 @@ import (
     "fmt"
 )
 
+const (
+    KEEP = iota
+    ESCAPE
+    REMOVE
+    PANIC
+)
+
 type State struct {
+    UnknownHTMLMode int
     IsBold bool
     IsItalic bool
     ListDepth int
 }
 
 func Convert(text string) string {
+    return ConvertCustom(text, State{})
+}
+
+func ConvertCustom(text string, state State) string {
     parsed, err := html.Parse(strings.NewReader(strings.TrimSpace(text)))
     if err != nil {
         log.Fatal(err)
     }
 
-    result, err := parse(State{}, parsed.LastChild.LastChild)
+    result, err := parse(state, parsed.LastChild.LastChild)
     if err != nil {
         panic(err)
     }
@@ -43,7 +55,17 @@ func parse(state State, source *html.Node) (s string, err error) {
             }
         }
         if !hasParser {
-            err = html.Render(result, node)
+            if state.UnknownHTMLMode == KEEP {
+                err = html.Render(result, node)
+            } else if state.UnknownHTMLMode == PANIC {
+                panic(fmt.Sprintf("Cannot process html tag %s", node.Data))
+            } else if state.UnknownHTMLMode == ESCAPE {
+                prerender := bytes.NewBufferString("")
+                err = html.Render(prerender, node)
+                result.WriteString(html.EscapeString(prerender.String()))
+            } else if state.UnknownHTMLMode == REMOVE {
+                continue
+            }
         } else if line, err := foundParser.Process(state, node, func(childState State) (string, error) {
             return parse(childState, node)
         }); err == nil {
