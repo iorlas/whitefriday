@@ -36,8 +36,12 @@ func TestBlockquoteSimple(t *testing.T) {
     equals(t, "> Hey\n> You!", Convert(text))
 }
 
-func TestNewline(t *testing.T) {
-    equals(t, "Derpy\n\nHer\n\npy", Convert("Derpy<br/>Her<br>py"))
+func TestBreak(t *testing.T) {
+    equals(t, "Derpy \nHer \npy", Convert("Derpy<br/>Her<br>py"))
+}
+
+func TestParagraph(t *testing.T) {
+    equals(t, "Derpy\n\nHer", Convert("<p>Derpy</p><p>Herpy</p>"))
 }
 
 func TestAnchor(t *testing.T) {
@@ -57,7 +61,7 @@ func TestImageWithTitle(t *testing.T) {
 }
 
 func TestDeepList(t *testing.T) {
-    equals(t, "1. Wow\n\t* Dat\n\t* Fat\n1. Hey\nYou", Convert("<ol><li>Wow</li><li>Dat <b>az</b></li><li>Hey\nYou</li></ol>"))
+    equals(t, "1. Wow\n\t* Dat\n\t* Fat\n1. Hey\nYou", Convert("<ol><li>Wow<ul><li>Dat</li><li>Fat</li></ul></li><li>Hey\nYou</li></ol>"))
 }
 
 
